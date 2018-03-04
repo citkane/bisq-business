@@ -41,6 +41,7 @@ import io.bisq.core.payment.PaymentAccountUtil;
 import io.bisq.core.payment.payload.PaymentMethod;
 import io.bisq.core.provider.fee.FeeService;
 import io.bisq.core.provider.price.PriceFeedService;
+import io.bisq.core.trade.Trade;
 import io.bisq.core.trade.TradeManager;
 import io.bisq.core.trade.handlers.TradeResultHandler;
 import io.bisq.core.user.Preferences;
@@ -281,6 +282,8 @@ public class TakeOfferDataModel extends OfferDataModel {
     // errorMessageHandler is used only in the check availability phase. As soon we have a trade we write the error msg in the trade object as we want to
     // have it persisted as well.
 
+    /*TODO I have copied to the API commit() method because I need to get access to the error handler for the return message
+     - needs refactoring in collaboration with GUI module */
     void onTakeOffer(TradeResultHandler tradeResultHandler) {
         checkNotNull(txFeeFromFeeService, "txFeeFromFeeService must not be null");
         checkNotNull(getTakerFee(), "takerFee must not be null");
@@ -698,11 +701,11 @@ public class TakeOfferDataModel extends OfferDataModel {
         );
     }
 
-    public void commit(Offer offer, PaymentAccount account,Coin amount, CompletableFuture<Message> promise){
+    public void commit(Offer offer, PaymentAccount account,Coin _amount, CompletableFuture<Message> promise){
 
         initWithData(offer);
         onPaymentAccountSelected(account);
-        applyAmount(amount);
+        applyAmount(_amount);
         if(!isMinAmountLessOrEqualAmount()){
             message.message = "Amount is less than the acceptable minimum";
             onClose();
@@ -732,7 +735,9 @@ public class TakeOfferDataModel extends OfferDataModel {
             return;
         }
         onShowPayFundsScreen();
+        fundFromSavingsWallet();
         if(!isBalanceSufficient(balance.get())){
+            message.success = false;
             message.message = "Insufficient funds for trade";
             onClose();
             deactivate();
@@ -740,19 +745,70 @@ public class TakeOfferDataModel extends OfferDataModel {
             return;
         }
 
-        fundFromSavingsWallet();
 
-        message.success = true;
-        onTakeOffer((trade) -> {
-            message.message = "You successfully accepted the offer";
-            message.data = TradeData.Map(trade);
-            promise.complete(message);
-            deactivate();
-        });
-        if(!message.success){
-            onClose();
-            deactivate();
-            promise.complete(message);
+        /*TODO I have copied onTakeOffer() because I need to get access to the error handler for the return message
+         - needs refactoring in collaboration with GUI module */
+        Coin fundsNeededForTrade = getSecurityDeposit().add(txFeeFromFeeService).add(txFeeFromFeeService);
+        if (isBuyOffer())
+            fundsNeededForTrade = fundsNeededForTrade.add(amount.get());
+
+        if (filterManager.isCurrencyBanned(offer.getCurrencyCode())) {
+
+            /*TODO refactor gui module and introduce new messaging system */
+            //new Popup<>().warning(Res.get("offerbook.warning.currencyBanned")).show();
+
+            message.success = false;
+            message.message = Res.get("offerbook.warning.currencyBanned");
+        } else if (filterManager.isPaymentMethodBanned(offer.getPaymentMethod())) {
+
+            /*TODO refactor gui module and introduce new messaging system */
+            //new Popup<>().warning(Res.get("offerbook.warning.paymentMethodBanned")).show();
+
+            message.success = false;
+            message.message = Res.get("offerbook.warning.paymentMethodBanned");
+        } else if (filterManager.isOfferIdBanned(offer.getId())) {
+
+            /*TODO refactor gui module and introduce new messaging system */
+            //new Popup<>().warning(Res.get("offerbook.warning.offerBlocked")).show();
+
+            message.success = false;
+            message.message = Res.get("offerbook.warning.offerBlocked");
+        } else if (filterManager.isNodeAddressBanned(offer.getMakerNodeAddress())) {
+
+            /*TODO refactor gui module and introduce new messaging system */
+            //new Popup<>().warning(Res.get("offerbook.warning.nodeBlocked")).show();
+
+            message.success = false;
+            message.message = Res.get("offerbook.warning.nodeBlocked");
+        } else {
+            tradeManager.onTakeOffer(amount.get(),
+                    txFeeFromFeeService,
+                    getTakerFee(),
+                    isCurrencyForTakerFeeBtc(),
+                    tradePrice.getValue(),
+                    fundsNeededForTrade,
+                    offer,
+                    paymentAccount.getId(),
+                    useSavingsWallet,
+                    (trade)->{
+                        message.success = true;
+                        message.message = "You successfully accepted the offer";
+                        promise.complete(message);
+                        deactivate();
+                    },
+                    errorMessage -> {
+                        log.warn(errorMessage);
+
+                        /*TODO refactor gui module and introduce new messaging system */
+                        //new Popup<>().warning(errorMessage).show();
+
+                        message.success = false;
+                        message.message = errorMessage;
+                        onClose();
+                        deactivate();
+                        promise.complete(message);
+                    }
+            );
         }
     }
     public void getTxFee(Offer offer,CompletableFuture<Coin> promise){

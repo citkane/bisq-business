@@ -85,7 +85,6 @@ public class Data {
     public static Runnable checkIfLocalHostNodeIsRunning;
 
     public final static Valid valid = new Valid();
-    public final static Models models = new Models();
 
     public static Injector injector;
 
@@ -126,9 +125,6 @@ public class Data {
         valid.bicValidator = new BICValidator();
         valid.inputValidator = new InputValidator();
 
-        models.takeOffer = injector.getInstance(TakeOfferDataModel.class);
-        models.createOffer = injector.getInstance(CreateOfferDataModel.class);
-
     }
 
     public static class Valid{
@@ -137,10 +133,5 @@ public class Data {
         public InputValidator inputValidator;
 
         /*TODO add all validators in this convenience class */
-    }
-
-    public static class Models{
-        public TakeOfferDataModel takeOffer;
-        public CreateOfferDataModel createOffer;
     }
 }

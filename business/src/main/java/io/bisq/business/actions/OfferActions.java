@@ -22,6 +22,8 @@ package io.bisq.business.actions;
 import io.bisq.business.Data;
 import io.bisq.business.formatters.Message;
 import io.bisq.business.formatters.OfferData;
+import io.bisq.business.models.CreateOfferDataModel;
+import io.bisq.business.models.TakeOfferDataModel;
 import io.bisq.common.UserThread;
 import io.bisq.core.offer.Offer;
 import io.bisq.core.offer.OfferPayload;
@@ -43,14 +45,14 @@ public class OfferActions extends Data {
 
     public static FeesData getFees(String offerId) {
 
-
+        TakeOfferDataModel takeOffer = injector.getInstance(TakeOfferDataModel.class);
         List<FeesData> list = offerBookService.getOffers().stream().filter(
                 offer -> offer.getId().equals(offerId)
         ).map((offer) -> {
             try {
                 CompletableFuture<Coin> promise = new CompletableFuture<>();
                 UserThread.execute(()-> {
-                    models.takeOffer.getTxFee(offer,promise);
+                    takeOffer.getTxFee(offer,promise);
                 });
                 Coin txFee = promise.get();
                 return MapFees(offer,txFee);
@@ -63,6 +65,8 @@ public class OfferActions extends Data {
     }
 
     public static Message takeOffer(String offerId, String accountId, BigDecimal Amount) throws ExecutionException, InterruptedException {
+
+        TakeOfferDataModel takeOffer = injector.getInstance(TakeOfferDataModel.class);
         Message message = new Message();
         Offer offer;
         PaymentAccount account;
@@ -106,13 +110,13 @@ public class OfferActions extends Data {
 
         CompletableFuture<Message> promise = new CompletableFuture<>();
         UserThread.execute(()-> {
-            models.takeOffer.preflight(offer,account,promise);
+            takeOffer.preflight(offer,account,promise);
         });
         message = promise.get();
         if(!message.success) return message;
         CompletableFuture<Message> promise2 = new CompletableFuture<>();
         UserThread.execute(()-> {
-            models.takeOffer.commit(offer,account,amount,promise2);
+            takeOffer.commit(offer,account,amount,promise2);
         });
 
         return promise2.get();
@@ -127,6 +131,8 @@ public class OfferActions extends Data {
             BigDecimal tPrice,
             boolean commit
     ) throws ExecutionException, InterruptedException {
+
+        CreateOfferDataModel createOffer = injector.getInstance(CreateOfferDataModel.class);
         Message message = new Message();
         PaymentAccount paymentAccount = user.getPaymentAccount(paymentAccountId);
         if(paymentAccount == null){
@@ -160,16 +166,19 @@ public class OfferActions extends Data {
 
         CompletableFuture<Message> promise = new CompletableFuture<>();
         UserThread.execute(()->{
-            models.createOffer.preflight(priceModel,Coin.valueOf(amount),Coin.valueOf(minAmount),margin,paymentAccount,dir,commit,promise);
+            createOffer.preflight(priceModel,Coin.valueOf(amount),Coin.valueOf(minAmount),margin,paymentAccount,dir,commit,promise);
         });
 
         message = promise.get();
-        if(!commit || !message.success) return message;
+        if(!commit || !message.success){
+            if(message.data != null) message.data = OfferData.Map((Offer) message.data);
+            return message;
+        }
 
         CompletableFuture<Message> promise2 = new CompletableFuture<>();
         Offer offer = (Offer) message.data;
         UserThread.execute(()->{
-            models.createOffer.commit(offer,promise2);
+            createOffer.commit(offer,promise2);
         });
         return promise2.get();
     }
@@ -209,6 +218,7 @@ public class OfferActions extends Data {
         OpenOffer Delete = toDelete.get();
         openOfferManager.removeOpenOffer(Delete,()->{
             message.message = "Offer " + offerId + " was removed.";
+            message.success = true;
         },(err)->{
             message.message = "Error: "+err;
             message.success = false;

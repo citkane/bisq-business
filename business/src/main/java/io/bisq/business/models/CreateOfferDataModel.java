@@ -20,6 +20,7 @@ package io.bisq.business.models;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.bisq.business.formatters.Message;
+import io.bisq.business.formatters.OfferData;
 import io.bisq.business.util.BSFormatter;
 import io.bisq.common.app.Version;
 import io.bisq.common.crypto.KeyRing;
@@ -858,26 +859,41 @@ public class CreateOfferDataModel extends OfferDataModel {
         }
 
         Offer offer = createAndGetOffer();
+        estimateTxSize();
+        calculateAmount();
         message.success = true;
         message.message = "Offer is valid but NOT committed";
+
         message.data = offer;
-        if(!commit) deactivate();
+        if(!commit || !message.success) {
+            swapTradeToSavings();
+            deactivate();
+        }
         promise.complete(message);
     }
     public void commit(Offer offer,CompletableFuture<Message> promise){
-        estimateTxSize();
+        fundFromSavingsWallet();
+        message.data = OfferData.Map(offer);
+        if(!isBtcWalletFunded.get()){
+            message.success = false;
+            message.message = "Insufficient funds in your wallet for the offer";
+            swapTradeToSavings();
+            deactivate();
+            promise.complete(message);
+            return;
+        }
         Coin reservedFundsForOffer = getSecurityDeposit();
         if (!isBuyOffer()) reservedFundsForOffer = reservedFundsForOffer.add(amount.get());
 
         openOfferManager.placeOffer(offer, reservedFundsForOffer, useSavingsWallet, (mess)->{
             message.success = true;
             message.message = "Offer was successfully placed";
-            message.data = offer;
             deactivate();
             promise.complete(message);
         },(error)->{
             message.success = false;
             message.message = error;
+            swapTradeToSavings();
             deactivate();
             promise.complete(message);
         });
