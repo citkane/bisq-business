@@ -31,8 +31,6 @@ import io.bisq.core.trade.Tradable;
 import io.bisq.core.trade.Trade;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -102,70 +100,52 @@ public class WalletActions extends Data {
         return promise.get();
     }
 
-    public static List<TransactionsListItem> getTransactionsRaw() throws ExecutionException, InterruptedException {
-        CompletableFuture<List<TransactionsListItem>> promise = new CompletableFuture<>();
-        UserThread.execute(()->{
-            Stream<Tradable> concat1 = Stream.concat(openOfferManager.getObservableList().stream(), tradeManager.getTradableList().stream());
-            Stream<Tradable> concat2 = Stream.concat(concat1, closedTradableManager.getClosedTradables().stream());
-            Stream<Tradable> concat3 = Stream.concat(concat2, failedTradesManager.getFailedTrades().stream());
-            Set<Tradable> all = concat3.collect(Collectors.toSet());
+    public static List<TransactionsListItem> getTransactionsRaw() {
+        Stream<Tradable> concat1 = Stream.concat(openOfferManager.getObservableList().stream(), tradeManager.getTradableList().stream());
+        Stream<Tradable> concat2 = Stream.concat(concat1, closedTradableManager.getClosedTradables().stream());
+        Stream<Tradable> concat3 = Stream.concat(concat2, failedTradesManager.getFailedTrades().stream());
+        Set<Tradable> all = concat3.collect(Collectors.toSet());
 
-            List<TransactionsListItem> list = btcWalletService.getTransactions(false).stream().map(transaction->{
-                Optional<Tradable> tradableOptional = all.stream().filter(tradable -> {
-                    String txId = transaction.getHashAsString();
-                    if (tradable instanceof OpenOffer)
-                        return tradable.getOffer().getOfferFeePaymentTxId().equals(txId);
-                    else if (tradable instanceof Trade) {
-                        Trade trade = (Trade) tradable;
-                        boolean isTakeOfferFeeTx = txId.equals(trade.getTakerFeeTxId());
-                        boolean isOfferFeeTx = trade.getOffer() != null &&
-                                txId.equals(trade.getOffer().getOfferFeePaymentTxId());
-                        boolean isDepositTx = trade.getDepositTx() != null &&
-                                trade.getDepositTx().getHashAsString().equals(txId);
-                        boolean isPayoutTx = trade.getPayoutTx() != null &&
-                                trade.getPayoutTx().getHashAsString().equals(txId);
+        return btcWalletService.getTransactions(false).stream().map(transaction->{
+            Optional<Tradable> tradableOptional = all.stream().filter(tradable -> {
+                String txId = transaction.getHashAsString();
+                if (tradable instanceof OpenOffer)
+                    return tradable.getOffer().getOfferFeePaymentTxId().equals(txId);
+                else if (tradable instanceof Trade) {
+                    Trade trade = (Trade) tradable;
+                    boolean isTakeOfferFeeTx = txId.equals(trade.getTakerFeeTxId());
+                    boolean isOfferFeeTx = trade.getOffer() != null &&
+                            txId.equals(trade.getOffer().getOfferFeePaymentTxId());
+                    boolean isDepositTx = trade.getDepositTx() != null &&
+                            trade.getDepositTx().getHashAsString().equals(txId);
+                    boolean isPayoutTx = trade.getPayoutTx() != null &&
+                            trade.getPayoutTx().getHashAsString().equals(txId);
 
-                        boolean isDisputedPayoutTx = disputeManager.getDisputesAsObservableList().stream().anyMatch(
-                                dispute -> txId.equals(dispute.getDisputePayoutTxId()) && tradable.getId().equals(dispute.getTradeId())
-                        );
+                    boolean isDisputedPayoutTx = disputeManager.getDisputesAsObservableList().stream().anyMatch(
+                            dispute -> txId.equals(dispute.getDisputePayoutTxId()) && tradable.getId().equals(dispute.getTradeId())
+                    );
 
-                        return isTakeOfferFeeTx || isOfferFeeTx || isDepositTx || isPayoutTx || isDisputedPayoutTx;
-                    } else
-                        return false;
-                }).findAny();
-                return new TransactionsListItem(transaction,btcWalletService,bsqWalletService,tradableOptional,bsFormatter);
-            }).collect(Collectors.toList());
-            promise.complete(list);
-        });
-
-        return promise.get();
+                    return isTakeOfferFeeTx || isOfferFeeTx || isDepositTx || isPayoutTx || isDisputedPayoutTx;
+                } else
+                    return false;
+            }).findAny();
+            return new TransactionsListItem(transaction,btcWalletService,bsqWalletService,tradableOptional,bsFormatter);
+        }).collect(Collectors.toList());
     }
 
     public static List<TransactionData> getTransactions() throws ExecutionException, InterruptedException {
 
-        CompletableFuture<List<TransactionData>> promise = new CompletableFuture<>();
-        UserThread.execute(() -> {
-            try {
-                List<TransactionData> list = getTransactionsRaw().stream().map((item) -> {
-                    TransactionData Item = new TransactionData();
-                    Item.date = item.getDate();
-                    Item.details = item.getDetails();
-                    Item.received = item.getReceived();
-                    Item.direction = item.getDirection();
-                    Item.address = item.getAddressString();
-                    Item.id = item.getTxId();
-                    Item.amount = item.getAmount();
-                    Item.confirmations = item.getNumConfirmations();
-                    return Item;
-                }).collect(Collectors.toList());
-                promise.complete(list);
-            } catch (ExecutionException | InterruptedException e) {
-                e.printStackTrace();
-                promise.complete(new ArrayList<>());
-            }
-
-
-        });
-        return promise.get();
+        return getTransactionsRaw().stream().map((item) -> {
+            TransactionData Item = new TransactionData();
+            Item.date = item.getDate();
+            Item.details = item.getDetails();
+            Item.received = item.getReceived();
+            Item.direction = item.getDirection();
+            Item.address = item.getAddressString();
+            Item.id = item.getTxId();
+            Item.amount = item.getAmount();
+            Item.confirmations = item.getNumConfirmations();
+            return Item;
+        }).collect(Collectors.toList());
     }
 }
