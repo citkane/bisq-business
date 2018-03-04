@@ -21,29 +21,45 @@ package io.bisq.business.actions;
 
 import io.bisq.business.Data;
 import io.bisq.business.formatters.Message;
+import io.bisq.business.formatters.OfferData;
 import io.bisq.common.UserThread;
 import io.bisq.core.offer.Offer;
 import io.bisq.core.offer.OfferPayload;
+import io.bisq.core.offer.OpenOffer;
 import io.bisq.core.payment.PaymentAccount;
 import org.bitcoinj.core.Coin;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import static io.bisq.business.formatters.OfferData.*;
 import static java.util.stream.Collectors.toList;
 
 public class OfferActions extends Data {
 
-    public static Coin getTxFee(Offer offer) throws ExecutionException, InterruptedException {
+    public static FeesData getFees(String offerId) {
 
-        CompletableFuture<Coin> promise = new CompletableFuture<>();
-        UserThread.execute(()-> {
-            models.takeOffer.getTxFee(offer,promise);
-        });
-        return promise.get();
+
+        List<FeesData> list = offerBookService.getOffers().stream().filter(
+                offer -> offer.getId().equals(offerId)
+        ).map((offer) -> {
+            try {
+                CompletableFuture<Coin> promise = new CompletableFuture<>();
+                UserThread.execute(()-> {
+                    models.takeOffer.getTxFee(offer,promise);
+                });
+                Coin txFee = promise.get();
+                return MapFees(offer,txFee);
+            } catch (ExecutionException | InterruptedException e) {
+                return new FeesData();
+            }
+        }).collect(toList());
+        if(list.isEmpty()) return new FeesData();
+        return list.get(0);
     }
 
     public static Message takeOffer(String offerId, String accountId, BigDecimal Amount) throws ExecutionException, InterruptedException {
@@ -156,5 +172,47 @@ public class OfferActions extends Data {
             models.createOffer.commit(offer,promise2);
         });
         return promise2.get();
+    }
+    public static List<OfferData> listOpenOffers(String currency){
+        return offerBookService.getOffers().stream().filter(
+                offer->currency == null || offer.getCurrencyCode().equals(currency)
+        ).map((offer)-> OfferData.Map(offer)).collect(toList());
+    }
+
+    public static Message offerById(String offerId){
+        Message message = new Message();
+        List<OfferData> list = offerBookService.getOffers().stream().filter(
+                offer->offer.getId().equals(offerId)
+        ).map((offer)->{
+            return OfferData.Map(offer);
+        }).collect(toList());
+
+        if(list.isEmpty()){
+            message.success=false;
+            message.message="Offer "+offerId+" was not found";
+            return message;
+        }
+        message.success = true;
+        message.message = offerId;
+        message.data = list.get(0);
+        return message;
+    }
+
+    public static Message removeOffer(String offerId){
+        Message message = new Message();
+        Optional<OpenOffer> toDelete = openOfferManager.getOpenOfferById(offerId);
+        if(!toDelete.isPresent()){
+            message.message = "Offer "+offerId+" is not available for deletion.";
+            message.success = false;
+            return message;
+        }
+        OpenOffer Delete = toDelete.get();
+        openOfferManager.removeOpenOffer(Delete,()->{
+            message.message = "Offer " + offerId + " was removed.";
+        },(err)->{
+            message.message = "Error: "+err;
+            message.success = false;
+        });
+        return message;
     }
 }

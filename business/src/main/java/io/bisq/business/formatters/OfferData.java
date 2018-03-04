@@ -22,6 +22,7 @@ package io.bisq.business.formatters;
 import io.bisq.business.Data;
 import io.bisq.core.offer.Offer;
 import io.bisq.core.offer.OfferPayload;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 
 public class OfferData extends Data {
@@ -51,7 +52,18 @@ public class OfferData extends Data {
         public double volume;
     };
 
-    public OfferData Map(Offer offer){
+    public static class FeesData{
+        public double buyerSecurityDeposit;
+        public String buyerPercent;
+        public double sellerSecurityDeposit;
+        public String sellerPercent;
+        public double minerFee;
+        public String minerPercent;
+        public double transactionFee;
+        public String transactionPercent;
+    }
+
+    public static OfferData Map(Offer offer){
         OfferPayload op = offer.getOfferPayload();
         OfferData offr = new OfferData();
         boolean fiat = offer.getPrice().getMonetary() instanceof Fiat;
@@ -77,5 +89,21 @@ public class OfferData extends Data {
         offr.error = offer.getErrorMessage();
 
         return offr;
+    }
+
+    public static FeesData MapFees(Offer offer, Coin txFee){
+        FeesData fees = new FeesData();
+        OfferData offr = Map(offer);
+
+        fees.buyerSecurityDeposit = Double.parseDouble(offer.getBuyerSecurityDeposit().toPlainString());
+        fees.buyerPercent = bsFormatter.formatToPercentWithSymbol(fees.buyerSecurityDeposit/offr.money.amount);
+        fees.sellerSecurityDeposit = Double.parseDouble(offer.getSellerSecurityDeposit().toPlainString());
+        fees.sellerPercent = bsFormatter.formatToPercentWithSymbol(fees.sellerSecurityDeposit/offr.money.amount);
+        fees.minerFee = Double.parseDouble(txFee.toPlainString());
+        fees.minerPercent = bsFormatter.formatToPercentWithSymbol(fees.minerFee/offr.money.amount);
+        fees.transactionFee = Double.parseDouble(offer.getMakerFee().toPlainString());
+        fees.transactionPercent = bsFormatter.formatToPercentWithSymbol(fees.transactionFee/offr.money.amount);
+
+        return fees;
     }
 }
