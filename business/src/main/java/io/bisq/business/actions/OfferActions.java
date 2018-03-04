@@ -64,7 +64,13 @@ public class OfferActions extends Data {
         return list.get(0);
     }
 
-    public static Message takeOffer(String offerId, String accountId, BigDecimal Amount) throws ExecutionException, InterruptedException {
+    public static Message takeOffer(
+
+            String offerId,
+            String accountId,
+            BigDecimal Amount
+
+    ) throws ExecutionException, InterruptedException {
 
         TakeOfferDataModel takeOffer = injector.getInstance(TakeOfferDataModel.class);
         Message message = new Message();
@@ -123,6 +129,7 @@ public class OfferActions extends Data {
     }
 
     public static Message createOffer(
+
             String paymentAccountId,
             String direction,
             BigDecimal Amount,
@@ -130,6 +137,7 @@ public class OfferActions extends Data {
             String priceModel,
             BigDecimal tPrice,
             boolean commit
+
     ) throws ExecutionException, InterruptedException {
 
         CreateOfferDataModel createOffer = injector.getInstance(CreateOfferDataModel.class);
@@ -166,7 +174,7 @@ public class OfferActions extends Data {
 
         CompletableFuture<Message> promise = new CompletableFuture<>();
         UserThread.execute(()->{
-            createOffer.preflight(priceModel,Coin.valueOf(amount),Coin.valueOf(minAmount),margin,paymentAccount,dir,commit,promise);
+            createOffer.preflight(priceModel,Coin.valueOf(amount),Coin.valueOf(minAmount),margin,price,paymentAccount,dir,commit,promise);
         });
 
         message = promise.get();

@@ -774,6 +774,7 @@ public class CreateOfferDataModel extends OfferDataModel {
             Coin amount,
             Coin minAmount,
             double margin,
+            BigDecimal _price,
             PaymentAccount account,
             OfferPayload.Direction dir,
             Boolean commit,
@@ -814,7 +815,7 @@ public class CreateOfferDataModel extends OfferDataModel {
             setPrice(Price.parse(priceCode,String.valueOf(P)));
         }else{
             setMarketPriceMargin(0);
-            setPrice(Price.parse(priceCode,price.toString()));
+            setPrice(Price.parse(priceCode,_price.toString()));
         }
 
         initWithData(dir,tradeCurrency);
