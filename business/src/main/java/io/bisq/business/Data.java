@@ -89,7 +89,7 @@ public class Data {
 
     public static Injector injector;
 
-    public void inject(Injector _injector, Runnable checkIfLocalHostNodeIsRunning){
+    public static void inject(Injector _injector, Runnable _checkIfLocalHostNodeIsRunning){
         injector = _injector;
         walletsManager = injector.getInstance(WalletsManager.class);
         walletsSetup = injector.getInstance(WalletsSetup.class);
@@ -118,7 +118,7 @@ public class Data {
         accountAgeWitnessService = injector.getInstance(AccountAgeWitnessService.class);
         bsFormatter = injector.getInstance(BSFormatter.class);
         offerBookService = injector.getInstance(OfferBookService.class);
-        this.checkIfLocalHostNodeIsRunning = checkIfLocalHostNodeIsRunning;
+        checkIfLocalHostNodeIsRunning = _checkIfLocalHostNodeIsRunning;
 
         /* Convenience classes */
 
