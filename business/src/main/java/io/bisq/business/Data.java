@@ -20,12 +20,10 @@
 package io.bisq.business;
 
 import com.google.inject.Injector;
-import io.bisq.business.models.CreateOfferDataModel;
-import io.bisq.business.models.TakeOfferDataModel;
-import io.bisq.business.util.BSFormatter;
-import io.bisq.business.util.validation.BICValidator;
-import io.bisq.business.util.validation.IBANValidator;
-import io.bisq.business.util.validation.InputValidator;
+import io.bisq.business.formatters.BSFormatter;
+import io.bisq.business.validation.BICValidator;
+import io.bisq.business.validation.IBANValidator;
+import io.bisq.business.validation.InputValidator;
 import io.bisq.common.Clock;
 import io.bisq.common.crypto.KeyRing;
 import io.bisq.core.alert.AlertManager;

@@ -17,7 +17,7 @@
 
 package io.bisq.business.models;
 
-import io.bisq.business.util.BSFormatter;
+import io.bisq.business.formatters.BSFormatter;
 import io.bisq.common.locale.Res;
 import io.bisq.core.app.BisqEnvironment;
 import io.bisq.core.btc.listeners.TxConfidenceListener;
@@ -28,7 +28,6 @@ import io.bisq.core.offer.Offer;
 import io.bisq.core.offer.OpenOffer;
 import io.bisq.core.trade.Tradable;
 import io.bisq.core.trade.Trade;
-import javafx.scene.control.Tooltip;
 import lombok.extern.slf4j.Slf4j;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Transaction;

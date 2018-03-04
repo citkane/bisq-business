@@ -21,7 +21,7 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.bisq.business.formatters.Message;
 import io.bisq.business.formatters.OfferData;
-import io.bisq.business.util.BSFormatter;
+import io.bisq.business.formatters.BSFormatter;
 import io.bisq.common.app.Version;
 import io.bisq.common.crypto.KeyRing;
 import io.bisq.common.locale.CurrencyUtil;
@@ -61,7 +61,6 @@ import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
