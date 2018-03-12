@@ -860,8 +860,6 @@ public class CreateOfferDataModel extends OfferDataModel {
         }
 
         Offer offer = createAndGetOffer();
-        estimateTxSize();
-        calculateAmount();
         message.success = true;
         message.message = "Offer is valid but NOT committed";
 
