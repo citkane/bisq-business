@@ -813,12 +813,13 @@ public class CreateOfferDataModel extends OfferDataModel {
             double P = priceFeedService.getMarketPrice(priceCode).getPrice();
             setPrice(Price.parse(priceCode,String.valueOf(P)));
         }else{
+            setMarketPriceAvailable(false);
             setMarketPriceMargin(0);
             setPrice(Price.parse(priceCode,_price.toString()));
         }
 
+        preferences.setSelectedPaymentAccountForCreateOffer(account);
         initWithData(dir,tradeCurrency);
-        onPaymentAccountSelected(account);
 
         Coin buyerSecurityDepositAsCoin = buyerSecurityDeposit.get();
         if(p2PService.getAddress() == null){
